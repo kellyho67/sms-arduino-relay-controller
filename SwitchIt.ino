@@ -17,6 +17,11 @@
 
 #define BUSYWAIT 5000  // milliseconds
 
+//#define Sprintln(a) (Serial.println(a)) //defined on
+#define Sprintln(a) //defined off
+//#define Sprint(a) (Serial.print(a)) //defined on
+#define Sprint(a)  //defined off
+
 
 // this is a large buffer for replies
 char replybuffer[255];
@@ -32,17 +37,12 @@ Adafruit_FONA fona = Adafruit_FONA(FONA_RST);
 uint8_t readline(char *buff, uint8_t maxbuff, uint16_t timeout = 0);
 
 boolean fonainit(void) {
-  Serial.println(F("Initializing....(May take 3 seconds)"));
+  Sprintln(F("Initializing....(May take 3 seconds)"));
    changeState(OFF,800);
 
   digitalWrite(LED, HIGH);
-  delay(100);
+  delay(200);
   digitalWrite(LED, LOW);
-  delay(100);
-  digitalWrite(LED, HIGH);
-  delay(100);
-  digitalWrite(LED, LOW);
-  delay(100);
    
   // make it slow so its easy to read!
   fonaSS.begin(4800); // if you're using software serial
@@ -50,28 +50,28 @@ boolean fonainit(void) {
 
   // See if the FONA is responding
   if (! fona.begin(fonaSS)) {           // can also try fona.begin(Serial1) 
-    Serial.println(F("Couldn't find FONA"));
+    Sprintln(F("Couldn't find FONA"));
     return false;
   }
-  Serial.println(F("FONA is OK"));
+  Sprintln(F("FONA is OK"));
   return true;
   
 }
 
 void setup() {
-  while (!Serial);  // useful for Leonardo/Micro, remove in production!
+  //while (!Serial);  // useful for Leonardo/Micro, remove in production!
 
   // set LED output for debugging
   pinMode(LED, OUTPUT);
   
-  // set up motor pins, but turn them off
+  // set up relay pins, but turn them off
   pinMode(SOCKET_1, OUTPUT);
   digitalWrite(SOCKET_1, LOW);
   pinMode(SOCKET_2, OUTPUT);
   digitalWrite(SOCKET_2, LOW);  
   
   Serial.begin(115200);
-  Serial.println(F("FONA basic test"));
+  Sprintln(F("FONA basic test"));
 
   while (! fonainit()) {
     delay(5000);
@@ -83,7 +83,7 @@ void setup() {
   char imei[15] = {0}; // MUST use a 16 character buffer for IMEI!
   uint8_t imeiLen = fona.getIMEI(imei);
   if (imeiLen > 0) {
-    Serial.print("SIM card IMEI: "); Serial.println(imei);
+    Sprint("SIM card IMEI: "); Sprintln(imei);
   }
   
   pinMode(FONA_RI, INPUT);
@@ -92,15 +92,16 @@ void setup() {
   fona.sendCheckReply(F("AT+CFGRI=1"), F("OK"));
 }
 
+
 int8_t lastsmsnum = 0;
 
 void loop() {
    digitalWrite(LED, HIGH);
-   delay(100);
+   delay(10);
    digitalWrite(LED, LOW);
        
   while (fona.getNetworkStatus() != 1) {
-    Serial.println("Waiting for cell connection");
+    Sprintln("Waiting for cell connection");
     delay(2000);
   }
   
@@ -112,7 +113,7 @@ void loop() {
   for (uint16_t i=0; i<BUSYWAIT; i++) {
      if (! digitalRead(FONA_RI)) {
         // RI pin went low, SMS received?
-        Serial.println(F("RI went low"));
+        Sprintln(F("RI went low SMS Received"));
         break;
      } 
      delay(1);
@@ -120,27 +121,32 @@ void loop() {
   
   int8_t smsnum = fona.getNumSMS();
   if (smsnum < 0) {
-    Serial.println(F("Could not read # SMS"));
+    Sprintln(F("No SMS on Card"));
     return;
   } else {
-    Serial.print(smsnum); 
-    Serial.println(F(" SMS's on SIM card!"));
+    Sprint(smsnum); 
+    Sprintln(F(" SMS's on SIM card!"));
   }
   
   if (smsnum == 0) return;
 
   // there's an SMS!
+  
   uint8_t n = 1; 
   while (true) {
      uint16_t smslen;
      char sender[25];
      
-     Serial.print(F("\n\rReading SMS #")); Serial.println(n);
+     Sprint(F("\n\rReading SMS #")); Sprintln(n);
      uint8_t len = fona.readSMS(n, replybuffer, 250, &smslen); // pass in buffer and max len!
+     char * p = strchr (replybuffer, ' '); //search for a space in the SMS Message
+     if (p) //if found, trucate at space
+     *p = 0;
+     
      // if the length is zero, its a special case where the index number is higher
      // so increase the max we'll look at!
      if (len == 0) {
-        Serial.println(F("[empty slot]"));
+        Sprintln(F("[empty slot]"));
         n++;
         continue;
      }
@@ -149,14 +155,16 @@ void loop() {
        sender[0] = 0;
      }
      
-     Serial.print(F("***** SMS #")); Serial.print(n);
-     Serial.print(" ("); Serial.print(len); Serial.println(F(") bytes *****"));
-     Serial.println(replybuffer);
-     Serial.print(F("From: ")); Serial.println(sender);
-     Serial.println(F("*****"));
+     Sprint(F("***** SMS #")); Sprint(n);
+     Sprint(" ("); Sprint(len); Sprintln(F(") bytes *****"));
+     Sprintln(replybuffer);
+     Sprint(F("From: ")); Sprintln(sender);
+     Sprintln(F("*****"));
      
      if (strcasecmp(replybuffer, "Off") == 0) {
        // Turn on socket!
+       digitalWrite(LED, HIGH);
+       digitalWrite(LED, LOW);
        digitalWrite(LED, HIGH);
        changeState(OFF, 800);
        sendStatus(sender);
@@ -183,29 +191,29 @@ void loop() {
 }
 
 void sendStatus(char *sender){
-      Serial.print("****sendStatus"); Serial.print(sender);
+      Sprint("****sendStatus"); Sprint(sender);
       //use this to send status a message.
       val=digitalRead(SOCKET_1);
       char status_text[32] ="Switch is: ";
       if(val==0){strcat(status_text,"on");
       }else{strcat(status_text,"off");}
-      Serial.print(F("Status info:")); Serial.println(status_text);
+      Sprint(F("Status info:")); Sprintln(status_text);
       if (!fona.sendSMS(sender, status_text)) {
-        Serial.println(F("Failed"));
+        Sprintln(F("Failed"));
       } else {
-        Serial.println(F("Sent!"));
+        Sprintln(F("Sent!"));
       }
 }
 
 void sendText(char number[32], char message[255]){
      if(sizeof(message) > 0){
         if(!fona.sendSMS(number,message)){
-         Serial.println(F("failed to send"));
+         Sprintln(F("failed to send"));
         } else {
-          Serial.println(F("Sent Message"));
+          Sprintln(F("Sent Message"));
         }
      } else {
-        Serial.println(F("no message in body"));
+        Sprintln(F("no message in body"));
      }
 }
 
