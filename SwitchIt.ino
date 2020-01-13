@@ -17,6 +17,13 @@
 
 #define BUSYWAIT 5000  // milliseconds
 
+/*
+ ***************************
+ * This line is used for debugging to the serial monitor
+ * if you leave these in debug mode, it does slow down your program when 
+ * not connected to USB
+ *****************************
+ */
 //#define Sprintln(a) (Serial.println(a)) //defined on
 #define Sprintln(a) //defined off
 //#define Sprint(a) (Serial.print(a)) //defined on
@@ -139,6 +146,8 @@ void loop() {
      
      Sprint(F("\n\rReading SMS #")); Sprintln(n);
      uint8_t len = fona.readSMS(n, replybuffer, 250, &smslen); // pass in buffer and max len!
+     
+     // added to truncate spaces that come over in the text message.  it causes werid things to happen
      char * p = strchr (replybuffer, ' '); //search for a space in the SMS Message
      if (p) //if found, trucate at space
      *p = 0;
