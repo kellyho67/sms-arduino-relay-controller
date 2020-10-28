@@ -24,10 +24,10 @@
  * not connected to USB
  *****************************
  */
-//#define Sprintln(a) (Serial.println(a)) //defined on
-#define Sprintln(a) //defined off
-//#define Sprint(a) (Serial.print(a)) //defined on
-#define Sprint(a)  //defined off
+#define Sprintln(a) (Serial.println(a)) //defined on
+//#define Sprintln(a) //defined off
+#define Sprint(a) (Serial.print(a)) //defined on
+//#define Sprint(a)  //defined off
 
 
 // this is a large buffer for replies
@@ -97,7 +97,10 @@ void setup() {
 // network. Contact your provider for the exact APN, username,
 // and password values. Username and password are optional and
 // can be removed, but APN is required.
-//fona.setGPRSNetworkSettings(F("your APN"), F("your username"), F("your password"));
+Sprint("setting APN to hologram ");
+fona.setGPRSNetworkSettings(F("hologram"));
+
+
   
   
   pinMode(FONA_RI, INPUT);
@@ -110,15 +113,38 @@ void setup() {
 int8_t lastsmsnum = 0;
 
 void loop() {
+ 
+   //flash our lights
    digitalWrite(LED, HIGH);
    delay(10);
    digitalWrite(LED, LOW);
+
        
-  while (fona.getNetworkStatus() != 1) {
-    Sprintln("Waiting for cell connection");
-    delay(2000);
-  }
-  
+//  while (fona.getNetworkStatus() != 1) {
+//    Sprintln("Waiting for cell connection");
+//    delay(2000);
+//  }
+
+Serial.println(F("Checking for network..."));
+
+  uint8_t x;
+  boolean success=false;
+  do {
+    x = fona.getNetworkStatus();
+    Serial.print(F("Network status "));
+    Serial.print(x);
+    Serial.print(F(": "));
+    if (x == 0) Serial.println(F("Not registered"));
+    if (x == 1) Serial.println(F("Registered (home)"));
+    if (x == 2) Serial.println(F("Not registered (searching)"));
+    if (x == 3) Serial.println(F("Denied"));
+    if (x == 4) Serial.println(F("Unknown"));
+    if (x == 5) Serial.println(F("Registered roaming"));
+    delay(500);
+    if ((x == 1) || (x==5))
+      success = true;
+  } while(success == false);
+
   
   // this is a 'busy wait' loop, we check if the interrupt
   // pin went low, and after BUSYWAIT milliseconds break out to check
