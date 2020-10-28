@@ -92,6 +92,13 @@ void setup() {
   if (imeiLen > 0) {
     Sprint("SIM card IMEI: "); Sprintln(imei);
   }
+// Optionally configure a GPRS APN, username, and password.
+// You might need to do this to access your network's GPRS/data
+// network. Contact your provider for the exact APN, username,
+// and password values. Username and password are optional and
+// can be removed, but APN is required.
+//fona.setGPRSNetworkSettings(F("your APN"), F("your username"), F("your password"));
+  
   
   pinMode(FONA_RI, INPUT);
   digitalWrite(FONA_RI, HIGH); // turn on pullup on RI
