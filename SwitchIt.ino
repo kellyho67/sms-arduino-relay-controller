@@ -1,6 +1,7 @@
 #include <SoftwareSerial.h>
 #include "Adafruit_FONA.h"
 
+
 #define FONA_RX  9
 #define FONA_TX  8
 #define FONA_RST 4
@@ -15,6 +16,8 @@
 #define OFF true
 #define ON false
 
+#define _debug true
+
 #define BUSYWAIT 5000  // milliseconds
 
 /*
@@ -24,10 +27,6 @@
  * not connected to USB
  *****************************
  */
-#define Sprintln(a) (Serial.println(a)) //defined on
-//#define Sprintln(a) //defined off
-#define Sprint(a) (Serial.print(a)) //defined on
-//#define Sprint(a)  //defined off
 
 
 // this is a large buffer for replies
@@ -44,7 +43,7 @@ Adafruit_FONA fona = Adafruit_FONA(FONA_RST);
 uint8_t readline(char *buff, uint8_t maxbuff, uint16_t timeout = 0);
 
 boolean fonainit(void) {
-  Sprintln(F("Initializing....(May take 3 seconds)"));
+    Serial.println(F("Initializing....(May take 3 seconds)"));
    changeState(OFF,800);
 
   digitalWrite(LED, HIGH);
@@ -57,10 +56,10 @@ boolean fonainit(void) {
 
   // See if the FONA is responding
   if (! fona.begin(fonaSS)) {           // can also try fona.begin(Serial1) 
-    Sprintln(F("Couldn't find FONA"));
+    Serial.println(F("Couldn't find FONA"));
     return false;
   }
-  Sprintln(F("FONA is OK"));
+  Serial.println(F("FONA is OK"));
   return true;
   
 }
@@ -78,7 +77,7 @@ void setup() {
   digitalWrite(SOCKET_2, LOW);  
   
   Serial.begin(115200);
-  Sprintln(F("FONA basic test"));
+  Serial.println(F("FONA basic test"));
 
   while (! fonainit()) {
     delay(5000);
@@ -90,14 +89,14 @@ void setup() {
   char imei[15] = {0}; // MUST use a 16 character buffer for IMEI!
   uint8_t imeiLen = fona.getIMEI(imei);
   if (imeiLen > 0) {
-    Sprint("SIM card IMEI: "); Sprintln(imei);
+    Serial.println("SIM card IMEI: "); Serial.println(imei);
   }
 // Optionally configure a GPRS APN, username, and password.
 // You might need to do this to access your network's GPRS/data
 // network. Contact your provider for the exact APN, username,
 // and password values. Username and password are optional and
 // can be removed, but APN is required.
-Sprint("setting APN to hologram ");
+Serial.print("setting APN to hologram ");
 fona.setGPRSNetworkSettings(F("hologram"));
 
 
@@ -125,7 +124,7 @@ void loop() {
 //    delay(2000);
 //  }
 
-Serial.println(F("Checking for network..."));
+   Serial.println(F("Checking for network..."));
 
   uint8_t x;
   boolean success=false;
@@ -153,7 +152,7 @@ Serial.println(F("Checking for network..."));
   for (uint16_t i=0; i<BUSYWAIT; i++) {
      if (! digitalRead(FONA_RI)) {
         // RI pin went low, SMS received?
-        Sprintln(F("RI went low SMS Received"));
+        Serial.println(F("RI went low SMS Received"));
         break;
      } 
      delay(1);
@@ -161,11 +160,11 @@ Serial.println(F("Checking for network..."));
   
   int8_t smsnum = fona.getNumSMS();
   if (smsnum < 0) {
-    Sprintln(F("No SMS on Card"));
+    Serial.println(F("No SMS on Card"));
     return;
   } else {
-    Sprint(smsnum); 
-    Sprintln(F(" SMS's on SIM card!"));
+    Serial.print(smsnum); 
+    Serial.println(F(" SMS's on SIM card!"));
   }
   
   if (smsnum == 0) return;
@@ -177,7 +176,7 @@ Serial.println(F("Checking for network..."));
      uint16_t smslen;
      char sender[25];
      
-     Sprint(F("\n\rReading SMS #")); Sprintln(n);
+     Serial.println(F("\n\rReading SMS #")); Serial.println(n);
      uint8_t len = fona.readSMS(n, replybuffer, 250, &smslen); // pass in buffer and max len!
      
      // added to truncate spaces that come over in the text message.  it causes werid things to happen
@@ -188,7 +187,7 @@ Serial.println(F("Checking for network..."));
      // if the length is zero, its a special case where the index number is higher
      // so increase the max we'll look at!
      if (len == 0) {
-        Sprintln(F("[empty slot]"));
+        Serial.println(F("[empty slot]"));
         n++;
         continue;
      }
@@ -197,11 +196,20 @@ Serial.println(F("Checking for network..."));
        sender[0] = 0;
      }
      
-     Sprint(F("***** SMS #")); Sprint(n);
-     Sprint(" ("); Sprint(len); Sprintln(F(") bytes *****"));
-     Sprintln(replybuffer);
-     Sprint(F("From: ")); Sprintln(sender);
-     Sprintln(F("*****"));
+     Serial.println(F("***** SMS #\n")); Serial.print(n);
+     Serial.println(" ("); Serial.print(len); Serial.println(F(") bytes *****\n"));
+     Serial.println(replybuffer);
+     
+     //setup the hologram number if neded.
+     /* String holonumber ="+447937405250";
+     int n = holonumber.length();
+     char holo_number[n+1];
+     strcpy(holo_number, holonumber.c_str());
+     
+     Sprint(F("From: ")); Sprintln(holo_number);
+     */
+     Serial.println(F("From: ")); Serial.println(sender);
+     Serial.println(F("*****\n"));
      
      if (strcasecmp(replybuffer, "Off") == 0) {
        // Turn on socket!
@@ -209,6 +217,7 @@ Serial.println(F("Checking for network..."));
        digitalWrite(LED, LOW);
        digitalWrite(LED, HIGH);
        changeState(OFF, 800);
+      
        sendStatus(sender);
        digitalWrite(LED, LOW);
      }
@@ -233,32 +242,32 @@ Serial.println(F("Checking for network..."));
 }
 
 void sendStatus(char *sender){
-      Sprint("****sendStatus"); Sprint(sender);
+      Serial.println("****sendStatus"); Serial.print(sender);
       //use this to send status a message.
       val=digitalRead(SOCKET_1);
       char status_text[32] ="Switch is: ";
       if(val==0){strcat(status_text,"on");
       }else{strcat(status_text,"off");}
-      Sprint(F("Status info:")); Sprintln(status_text);
+      Serial.println(F("Status info:")); Serial.println(status_text);
       if (!fona.sendSMS(sender, status_text)) {
-        Sprintln(F("Failed"));
+        Serial.println(F("Failed"));
       } else {
-        Sprintln(F("Sent!"));
+        Serial.println(F("Sent!"));
       }
 }
-
+// for fona route all replys back to +447 93 740 5250
 void sendText(char number[32], char message[255]){
      if(sizeof(message) > 0){
         if(!fona.sendSMS(number,message)){
-         Sprintln(F("failed to send"));
+         Serial.println(F("failed to send"));
         } else {
-          Sprintln(F("Sent Message"));
+          Serial.println(F("Sent Message"));
         }
      } else {
-        Sprintln(F("no message in body"));
+        Serial.println(F("no message in body"));
      }
 }
-
+     
 void changeState(boolean direction, uint16_t t) {
   if (direction) {
     digitalWrite(SOCKET_1, HIGH);
